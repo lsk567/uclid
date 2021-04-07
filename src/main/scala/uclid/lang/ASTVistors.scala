@@ -107,6 +107,7 @@ trait ReadOnlyPass[T] {
   def applyOnConstantLit(d : TraversalDirection.T, cnst : ConstantLitDecl, in : T, context : Scope) : T = { in }
   def applyOnModuleConstantsImport(d : TraversalDirection.T, modConstImport : ModuleConstantsImportDecl, in : T, context : Scope) : T = { in }
   def applyOnSpec(d : TraversalDirection.T, spec : SpecDecl, in : T, context : Scope) : T = { in }
+  def applyOnContract(d : TraversalDirection.T, contract : ContractDecl, in : T, context : Scope) : T = { in }
   def applyOnAxiom(d : TraversalDirection.T, axiom : AxiomDecl, in : T, context : Scope) : T = { in }
   def applyOnTypeDecl(d : TraversalDirection.T, typDec : TypeDecl, in : T, context : Scope) : T = { in }
   def applyOnModuleImport(d : TraversalDirection.T, modImport : ModuleImportDecl, in : T, context : Scope) : T = { in }
@@ -211,6 +212,7 @@ trait RewritePass {
   def rewriteModuleConstantsImport(modConstImport : ModuleConstantsImportDecl, ctx : Scope) : Option[ModuleConstantsImportDecl] = { Some(modConstImport) }
   def rewriteSpec(spec : SpecDecl, ctx : Scope) : Option[SpecDecl] = { Some(spec) }
   def rewriteAxiom(axiom : AxiomDecl, ctx : Scope) : Option[AxiomDecl] = { Some(axiom) }
+  def rewriteContract(contract : ContractDecl, ctx : Scope) : Option[ContractDecl] = { Some(contract) }
   def rewriteTypeDecl(typDec : TypeDecl, ctx : Scope) : Option[TypeDecl] = { Some(typDec) }
   def rewriteModuleImport(modImport : ModuleImportDecl, ctx : Scope) : Option[ModuleImportDecl] = { Some(modImport) }
   def rewriteModuleTypesImport(modTypeImport : ModuleTypesImportDecl, ctx : Scope) : Option[ModuleTypesImportDecl] = { Some(modTypeImport) }
@@ -348,7 +350,11 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case next : NextDecl => visitNext(next, result, context.withEnvironment(SequentialEnvironment))
       case spec : SpecDecl => visitSpec(spec, result, context)
       case axiom : AxiomDecl => visitAxiom(axiom, result, context)
+<<<<<<< HEAD
       case groupDecl : GroupDecl => visitGroup(groupDecl, result, context)
+=======
+      case contract : ContractDecl => visitContract(contract, result, context)
+>>>>>>> 3039581 (ContractDecl follow the SpecDecl)
     }
     result = pass.applyOnDecl(TraversalDirection.Up, decl, result, context)
     return result
@@ -538,6 +544,18 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     result = pass.applyOnSpec(TraversalDirection.Up, spec, result, context)
     return result
   }
+
+  def visitContract(contract : ContractDecl, in : T, context : Scope) : T = {
+    var result : T = in
+    val contextP = context
+    result = pass.applyOnContract(TraversalDirection.Down, contract, result, context)
+    result = visitIdentifier(contract.id, result, context)
+    result = visitExpr(contract.expr, result, contextP.withEnvironment(ContractEnvironment(contract)))
+    result = contract.params.foldLeft(result)((acc, d) => visitExprDecorator(d, acc, context))
+    result = pass.applyOnContract(TraversalDirection.Up, contract, result, context)
+    return result
+  }
+
   def visitAxiom(axiom : AxiomDecl, in : T, context : Scope) : T = {
     var result : T = in
     result = pass.applyOnAxiom(TraversalDirection.Down, axiom, result, context)
@@ -1231,7 +1249,11 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case nextDecl : NextDecl => visitNext(nextDecl, context.withEnvironment(SequentialEnvironment))
       case specDecl : SpecDecl => visitSpec(specDecl, context)
       case axiomDecl : AxiomDecl => visitAxiom(axiomDecl, context)
+<<<<<<< HEAD
       case groupDecl : GroupDecl => visitGroup(groupDecl, context)
+=======
+      case contractDecl : ContractDecl => visitContract(contractDecl, context)
+>>>>>>> 3039581 (ContractDecl follow the SpecDecl)
     }).flatMap(pass.rewriteDecl(_, context))
     return ASTNode.introducePos(setPosition, setFilename, declP, decl.position)
   }
@@ -1591,6 +1613,18 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case _ => None
     }
     return ASTNode.introducePos(setPosition, setFilename, specP, spec.position)
+  }
+
+  def visitContract(contract : ContractDecl, context : Scope) : Option[ContractDecl] = {
+    val contextP = context
+    val idP = visitIdentifier(contract.id, context)
+    val exprP = visitExpr(contract.expr, contextP.withEnvironment(ContractEnvironment(contract)))
+    val decsP = contract.params.map(visitExprDecorator(_, context)).flatten
+    val contractP = (idP, exprP) match {
+      case (Some(id), Some(expr)) => pass.rewriteContract(ContractDecl(id, expr, decsP), context)
+      case _ => None
+    }
+    return ASTNode.introducePos(setPosition, setFilename, contractP, contract.position)
   }
 
   def visitAxiom(axiom : AxiomDecl, context : Scope) : Option[AxiomDecl] = {
