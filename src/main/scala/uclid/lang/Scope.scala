@@ -175,6 +175,16 @@ case class AxiomEnvironment(axiom: lang.AxiomDecl) extends ExpressionEnvironment
     ExprDecorator.isHyperproperty(axiom.params)
   }
 }
+case class ContractEnvironment(decl: lang.ContractDecl) extends ExpressionEnvironment {
+  override def isModuleLevel = true
+  override def isVerificationContext = true
+  override def inLTLSpec: Boolean = {
+    decl.params.contains(LTLExprDecorator)
+  }
+  override def inHyperproperty : Boolean = {
+    ExprDecorator.isHyperproperty(decl.params)
+  }
+}
 
 case class Scope (
     map: Scope.IdentifierMap, module : Option[Module], procedure : Option[ProcedureDecl], 
@@ -268,6 +278,7 @@ case class Scope (
           case Some(id) => Scope.addToMap(mapAcc, Scope.AxiomVar(id, expr, params))
           case None => mapAcc
         }
+        case ContractDecl(id, expr, params) => Scope.addToMap(mapAcc, Scope.SpecVar(id, expr, params))
         //case ModuleConstantsImportDecl(id) => Scope.addToMap(mapAcc, Scope.ConstantsImport(id))
         //case ModuleFunctionsImportDecl(id) => Scope.addToMap(mapAcc, Scope.FunctionsImport(id))
         case ModuleConstantsImportDecl(_) => mapAcc
@@ -309,7 +320,7 @@ case class Scope (
         case ModuleTypesImportDecl(_) | ModuleConstantsImportDecl(_) |
              ModuleFunctionsImportDecl(_) | ModuleDefinesImportDecl(_) |
              InstanceDecl(_, _, _, _, _) | SpecDecl(_, _, _) | 
-             AxiomDecl(_, _, _) | InitDecl(_) | NextDecl(_) => mapAcc
+             AxiomDecl(_, _, _) | InitDecl(_) | NextDecl(_) | ContractDecl(_,_,_) => mapAcc
       }
     }
     Scope(m2, Some(m), None, None, environment, parent)

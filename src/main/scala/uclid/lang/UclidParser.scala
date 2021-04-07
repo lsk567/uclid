@@ -761,9 +761,11 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       }
     }
 
-    lazy val ContractDecl : PackratParser[lang.ContractDecl] = positioned {
-      KwContract ~> Id ~ (":" ~> Expr) <~ ";" ^^ {
-        case id ~ expr => lang.ContractDecl(Some(id), expr, List.empty)
+    lazy val ContractDecl : PackratParser[lang.ContractDecl] =  positioned {
+      (KwContract) ~> ("[" ~> rep(Expr) <~ "]").? ~ Id ~  (":" ~> Expr) <~ ";" ^^ {
+        case decOption ~ id ~ expr => decOption match {
+        case None => lang.ContractDecl(id, expr, List.empty)
+        case Some(dec) => lang.ContractDecl(id, expr, dec.map(ExprDecorator.parse(_))) }
       }
     }
 

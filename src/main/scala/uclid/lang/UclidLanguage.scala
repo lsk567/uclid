@@ -1359,17 +1359,17 @@ case class AxiomDecl(id : Option[Identifier], expr: Expr, params: List[ExprDecor
   }
 }
 
-case class ContractDecl(id : Option[Identifier], expr: Expr, params: List[ExprDecorator]) extends Decl {
+case class ContractDecl(id: Identifier, expr: Expr, params: List[ExprDecorator]) extends Decl {
   override def toString = {
-    id match {
-      case Some(id) => "contract " + id.toString + " : " + expr.toString()
-      case None => "contract " + expr.toString
+    val declString = if (params.size > 0) {
+      "[" + Utils.join(params.map(_.toString), ", ") + "]"
+    } else {
+      ""
     }
+    "%s %s%s : %s; // %s".format("contract ", id.toString, declString, expr.toString, position.toString)
   }
-  override def declNames = id match {
-    case Some(i) => List(i)
-    case _ => List.empty
-  }
+  override def declNames = List(id)
+  def name = "%s %s".format("contract ", id.toString())
 }
 
 sealed abstract class ProofCommand extends ASTNode
