@@ -180,6 +180,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwHyperAxiom = "hyperaxiom"
     lazy val KwMacro = "macro"
     lazy val KwGroup = "group"
+    lazy val KwContract = "contract"
     // lazy val TemporalOpGlobally = "G"
     // lazy val TemporalOpFinally = "F"
     // lazy val TemporalOpNext = "Next"
@@ -203,7 +204,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwNext, KwLambda, KwModifies, KwProperty, KwDefineAxiom,
       KwForall, KwExists, KwFiniteForall, KwFiniteExists, KwGroup, KwDefault, KwSynthesis, KwGrammar, KwRequires,
       KwEnsures, KwInvariant, KwParameter, 
-      KwHyperProperty, KwHyperInvariant, KwHyperAxiom, KwMacro)
+      KwHyperProperty, KwHyperInvariant, KwHyperAxiom, KwMacro, KwContract)
 
     lazy val ast_binary: Expr ~ String ~ Expr => Expr = {
       case x ~ OpBiImpl ~ y => OperatorApplication(IffOp(), List(x, y))
@@ -816,6 +817,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         case id ~ gType ~ gElems => {
           lang.GroupDecl(id, lang.GroupType(gType), gElems)
         }
+    lazy val ContractDecl : PackratParser[lang.ContractDecl] = positioned {
+      KwContract ~> Id ~ (":" ~> Expr) <~ ";" ^^ {
+        case id ~ expr => lang.ContractDecl(Some(id), expr, List.empty)
       }
     }
 
@@ -826,7 +830,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
                   VarsDecl | InputsDecl | OutputsDecl | SharedVarsDecl |
                   ConstLitDecl | ConstDecl | ProcedureDecl |
                   InitDecl | NextDecl | SpecDecl | AxiomDecl |
-                  ModuleImportDecl | MacroDecl | GroupDecl)
+                  ModuleImportDecl | MacroDecl | GroupDecl | ContractDecl)
 
     // control commands.
     lazy val CmdParam : PackratParser[lang.CommandParams] = 
@@ -861,6 +865,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         case id ~ (decls ~ None) => lang.Module(id, decls, List.empty, Annotation.default)
       }
     }
+
+
 
     lazy val Model: PackratParser[List[Module]] = rep(Module)
 
