@@ -174,6 +174,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwHyperProperty = "hyperproperty"
     lazy val KwHyperInvariant = "hyperinvariant"
     lazy val KwHyperAxiom = "hyperaxiom"
+    lazy val KwContract = "contract"
     // lazy val TemporalOpGlobally = "G"
     // lazy val TemporalOpFinally = "F"
     // lazy val TemporalOpNext = "Next"
@@ -197,7 +198,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwNext, KwLambda, KwModifies, KwProperty, KwDefineAxiom,
       KwForall, KwExists, KwDefault, KwSynthesis, KwGrammar, KwRequires,
       KwEnsures, KwInvariant, KwParameter, 
-      KwHyperProperty, KwHyperInvariant, KwHyperAxiom)
+      KwHyperProperty, KwHyperInvariant, KwHyperAxiom, KwContract)
 
     lazy val ast_binary: Expr ~ String ~ Expr => Expr = {
       case x ~ OpBiImpl ~ y => OperatorApplication(IffOp(), List(x, y))
@@ -760,14 +761,19 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       }
     }
 
+    lazy val ContractDecl : PackratParser[lang.ContractDecl] = positioned {
+      KwContract ~> Id ~ (":" ~> Expr) <~ ";" ^^ {
+        case id ~ expr => lang.ContractDecl(Some(id), expr, List.empty)
+      }
+    }
+
     lazy val Decl: PackratParser[Decl] =
       positioned (InstanceDecl | TypeDecl | ConstDecl | FuncDecl |
                   ModuleTypesImportDecl | ModuleFuncsImportDecl | ModuleConstsImportDecl |
                   SynthFuncDecl | DefineDecl | ModuleDefsImportDecl | GrammarDecl |
                   VarsDecl | InputsDecl | OutputsDecl | SharedVarsDecl |
                   ConstLitDecl | ConstDecl | ProcedureDecl |
-                  InitDecl | NextDecl | SpecDecl | AxiomDecl)
-
+                  InitDecl | NextDecl | SpecDecl | AxiomDecl | ContractDecl)
     // control commands.
     lazy val CmdParam : PackratParser[lang.CommandParams] = 
       // TODO: Current fix to allow for logic to be specified for synthesize invariant
@@ -799,6 +805,8 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         case id ~ (decls ~ None) => lang.Module(id, decls, List.empty, Annotation.default)
       }
     }
+
+
 
     lazy val Model: PackratParser[List[Module]] = rep(Module)
 
