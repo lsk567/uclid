@@ -356,6 +356,16 @@ class SymbolicSimulator (module : Module) {
             UclidMain.printStatus("This will modify a macro")
             UclidMain.printStatus(cmd.args(0).toString())
             UclidMain.printStatus(cmd.macroBody.toString())
+          case "prove_by_contracts" =>
+            Console.println(module.contracts.size.toString + " contracts found:")
+            module.contracts.foreach{
+              (contract) => Console.println(contract.id + " $$$ " + contract.expr.toString)
+            }
+            Console.printf("%d Args \n", cmd.args.size)
+            cmd.args.foreach{
+              (arg) => Console.println(arg._1.toString + " ? " + arg._2)
+            }
+            Console.printf("Test: %d, %d, %b, %b, %b\n", cmd.args.size, cmd.params.size, cmd.resultVar.isEmpty, cmd.argObj.isEmpty, cmd.argObj.isDefined)
           case _ =>
             throw new Utils.UnimplementedException("Command not supported: " + cmd.toString)
         }

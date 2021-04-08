@@ -1588,6 +1588,8 @@ case class Module(id: Identifier, decls: List[Decl], var cmds : List[GenericProo
 
   // module properties.
   lazy val properties : List[SpecDecl] = decls.collect{ case spec : SpecDecl => spec }
+  // module contracts
+  lazy val contracts : List[ContractDecl] = decls.collect{ case contract : ContractDecl => contract }
 
   lazy val externalMap : Map[Identifier, ModuleExternal] =
     (functions.map(f => (f.id -> f))  ++ synthFunctions.map(sf => (sf.id -> sf)) ++ (constantDecls.flatMap(c => c.ids.map(id => (id, c))).map(p => p._1 -> p._2))).toMap
