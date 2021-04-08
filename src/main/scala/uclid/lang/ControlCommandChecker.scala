@@ -211,6 +211,14 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
         checkNoParams(cmd, filename)
         checkHasArgObj(cmd, filename, context)
         checkNoResultVar(cmd, filename)
+      case "prove_by_contracts" =>
+        // checkNoResultVar(cmd, filename)
+        // checkNoParams(cmd, filename)
+        // checkNoArgObj(cmd, filename)
+        Console.printf(cmd.name.toString)
+        Console.printf(cmd.args(0)._1.toString)
+        Console.printf(cmd.args(1)._1.toString)
+        Console.println("Have not Implemented Contract")
       case _ =>
         Utils.raiseParsingError("Unknown control command: " + cmd.name.toString, cmd.pos, filename)
     }
