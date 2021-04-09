@@ -175,6 +175,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     lazy val KwHyperInvariant = "hyperinvariant"
     lazy val KwHyperAxiom = "hyperaxiom"
     lazy val KwContract = "contract"
+    lazy val KwAGContract = "assume_guarantee"
     // lazy val TemporalOpGlobally = "G"
     // lazy val TemporalOpFinally = "F"
     // lazy val TemporalOpNext = "Next"
@@ -198,7 +199,7 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
       KwNext, KwLambda, KwModifies, KwProperty, KwDefineAxiom,
       KwForall, KwExists, KwDefault, KwSynthesis, KwGrammar, KwRequires,
       KwEnsures, KwInvariant, KwParameter, 
-      KwHyperProperty, KwHyperInvariant, KwHyperAxiom, KwContract)
+      KwHyperProperty, KwHyperInvariant, KwHyperAxiom, KwContract, KwAGContract)
 
     lazy val ast_binary: Expr ~ String ~ Expr => Expr = {
       case x ~ OpBiImpl ~ y => OperatorApplication(IffOp(), List(x, y))
@@ -762,10 +763,10 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
     }
 
     lazy val ContractDecl : PackratParser[lang.ContractDecl] =  positioned {
-      (KwContract) ~> ("[" ~> rep(Expr) <~ "]").? ~ Id ~  (":" ~> Expr) <~ ";" ^^ {
-        case decOption ~ id ~ expr => decOption match {
-        case None => lang.ContractDecl(id, expr, List.empty)
-        case Some(dec) => lang.ContractDecl(id, expr, dec.map(ExprDecorator.parse(_))) }
+      (KwContract) ~> ("[" ~> rep(Expr) <~ "]").? ~ Id ~  (":" ~> (KwAGContract) ~> ("(" ~> Expr)) ~ ("," ~> Expr) <~ ")" <~ ";" ^^ {
+        case decOption ~ id ~ expr_a ~ expr_g => decOption match {
+        case None => lang.ContractDecl(id, expr_a, expr_g, List.empty)
+        case Some(dec) => lang.ContractDecl(id, expr_a, expr_g, dec.map(ExprDecorator.parse(_))) }
       }
     }
 

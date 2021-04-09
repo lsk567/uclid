@@ -69,7 +69,7 @@ object Scope {
   case class ForIndexVar(iId : Identifier, iTyp : Type) extends ReadOnlyNamedExpression(iId, iTyp)
   case class SpecVar(varId : Identifier, expr: Expr, params: List[ExprDecorator]) extends ReadOnlyNamedExpression(varId, BooleanType())
   case class AxiomVar(varId : Identifier, expr : Expr, params: List[ExprDecorator]) extends ReadOnlyNamedExpression(varId, BooleanType())
-  case class ContractVar(varId : Identifier, expr: Expr, params: List[ExprDecorator]) extends ReadOnlyNamedExpression(varId, BooleanType())
+  case class ContractVar(varId : Identifier, expr_a: Expr, expr_g: Expr, params: List[ExprDecorator]) extends ReadOnlyNamedExpression(varId, BooleanType())
   case class EnumIdentifier(enumId : Identifier, enumTyp : EnumType) extends ReadOnlyNamedExpression(enumId, enumTyp)
   case class SelectorField(fId : Identifier) extends ReadOnlyNamedExpression(fId, UndefinedType())
   case class ForallVar(vId : Identifier, vTyp : Type) extends ReadOnlyNamedExpression(vId, vTyp)
@@ -279,7 +279,7 @@ case class Scope (
           case Some(id) => Scope.addToMap(mapAcc, Scope.AxiomVar(id, expr, params))
           case None => mapAcc
         }
-        case ContractDecl(id, expr, params) => Scope.addToMap(mapAcc, Scope.ContractVar(id, expr, params))
+        case ContractDecl(id, expr_a, expr_g, params) => Scope.addToMap(mapAcc, Scope.ContractVar(id, expr_a, expr_g, params))
         //case ModuleConstantsImportDecl(id) => Scope.addToMap(mapAcc, Scope.ConstantsImport(id))
         //case ModuleFunctionsImportDecl(id) => Scope.addToMap(mapAcc, Scope.FunctionsImport(id))
         case ModuleConstantsImportDecl(_) => mapAcc
@@ -321,7 +321,7 @@ case class Scope (
         case ModuleTypesImportDecl(_) | ModuleConstantsImportDecl(_) |
              ModuleFunctionsImportDecl(_) | ModuleDefinesImportDecl(_) |
              InstanceDecl(_, _, _, _, _) | SpecDecl(_, _, _) | 
-             AxiomDecl(_, _, _) | InitDecl(_) | NextDecl(_) | ContractDecl(_,_,_) => mapAcc
+             AxiomDecl(_, _, _) | InitDecl(_) | NextDecl(_) | ContractDecl(_,_,_,_) => mapAcc
       }
     }
     Scope(m2, Some(m), None, None, environment, parent)

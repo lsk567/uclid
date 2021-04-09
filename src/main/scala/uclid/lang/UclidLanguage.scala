@@ -1359,14 +1359,14 @@ case class AxiomDecl(id : Option[Identifier], expr: Expr, params: List[ExprDecor
   }
 }
 
-case class ContractDecl(id: Identifier, expr: Expr, params: List[ExprDecorator]) extends Decl {
+case class ContractDecl(id: Identifier, expr_a: Expr, expr_g: Expr, params: List[ExprDecorator]) extends Decl {
   override def toString = {
     val declString = if (params.size > 0) {
       "[" + Utils.join(params.map(_.toString), ", ") + "]"
     } else {
       ""
     }
-    "%s %s%s : %s; // %s".format("contract ", id.toString, declString, expr.toString, position.toString)
+    "%s %s%s,%s : %s; // %s".format("contract ", id.toString, declString, expr_a.toString, expr_g.toString, position.toString)
   }
   override def declNames = List(id)
   def name = "%s %s".format("contract ", id.toString())
