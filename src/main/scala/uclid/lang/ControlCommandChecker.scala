@@ -80,6 +80,18 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
     val cntLit = cmd.args(0)
     Utils.checkParsingError(cntLit._1.isInstanceOf[Identifier], "'%s' command expects a identifier as argument".format(cmd.name.toString), cmd.pos, filename)
   }
+  def checkHasLessThanThreeTupleOfIdentifierArg(cmd : GenericProofCommand, filename : Option[String]) {
+    Utils.checkParsingError(cmd.args.size < 3, "'%s' command expects less than three arguments".format(cmd.name.toString), cmd.pos, filename)
+    cmd.args.foreach{
+      (arg) => {
+        Utils.checkParsingError(arg._1.isInstanceOf[Tuple], "'%s' command expects only tuples as arguments".format(cmd.name.toString), cmd.pos, filename)
+        arg._1.asInstanceOf[Tuple].values.foreach{
+          (id) =>
+          Utils.checkParsingError(id.isInstanceOf[Identifier], "'%s' command expects identifiers in the tuple arguments".format(cmd.name.toString), cmd.pos, filename)
+        }
+      }
+    }
+  }
   def checkSetOptionCmd(cmd : GenericProofCommand, filename: Option[String]): Unit = {
     Utils.checkParsingError(cmd.args.size == 2, "'%s' command expects exactly two arguments".format(cmd.name.toString()), cmd.pos, filename)
     val optionName = cmd.args(0)._1
@@ -231,13 +243,14 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
         checkHasMacroBody(cmd, filename)
         checkHasValidMacroIdentifier(cmd, filename, context)
       case "prove_by_contracts" =>
-        // checkNoResultVar(cmd, filename)
-        // checkNoParams(cmd, filename)
-        // checkNoArgObj(cmd, filename)
-        Console.printf(cmd.name.toString)
-        Console.printf(cmd.args(0)._1.toString)
-        Console.printf(cmd.args(1)._1.toString)
-        Console.println("Have not Implemented Contract")
+        checkNoResultVar(cmd, filename)
+        checkNoParams(cmd, filename)
+        checkNoArgObj(cmd, filename)
+        checkHasLessThanThreeTupleOfIdentifierArg(cmd, filename)
+        //Console.printf(cmd.name.toString)
+        //Console.printf(cmd.args(0)._1.toString)
+        //Console.printf(cmd.args(1)._1.toString)
+        //Console.println("Have not Implemented Contract")
       case _ =>
         Utils.raiseParsingError("Unknown control command: " + cmd.name.toString, cmd.pos, filename)
     }

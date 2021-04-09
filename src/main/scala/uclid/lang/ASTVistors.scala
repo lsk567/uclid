@@ -550,7 +550,8 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
     val contextP = context
     result = pass.applyOnContract(TraversalDirection.Down, contract, result, context)
     result = visitIdentifier(contract.id, result, context)
-    result = visitExpr(contract.expr, result, contextP.withEnvironment(ContractEnvironment(contract)))
+    result = visitExpr(contract.expr_a, result, contextP.withEnvironment(ContractEnvironment(contract)))
+    result = visitExpr(contract.expr_g, result, contextP.withEnvironment(ContractEnvironment(contract)))
     result = contract.params.foldLeft(result)((acc, d) => visitExprDecorator(d, acc, context))
     result = pass.applyOnContract(TraversalDirection.Up, contract, result, context)
     return result
@@ -1618,10 +1619,11 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
   def visitContract(contract : ContractDecl, context : Scope) : Option[ContractDecl] = {
     val contextP = context
     val idP = visitIdentifier(contract.id, context)
-    val exprP = visitExpr(contract.expr, contextP.withEnvironment(ContractEnvironment(contract)))
+    val exprP_a = visitExpr(contract.expr_a, contextP.withEnvironment(ContractEnvironment(contract)))
+    val exprP_g = visitExpr(contract.expr_g, contextP.withEnvironment(ContractEnvironment(contract)))
     val decsP = contract.params.map(visitExprDecorator(_, context)).flatten
-    val contractP = (idP, exprP) match {
-      case (Some(id), Some(expr)) => pass.rewriteContract(ContractDecl(id, expr, decsP), context)
+    val contractP = (idP, exprP_a, exprP_g) match {
+      case (Some(id), Some(expr_a), Some(expr_g)) => pass.rewriteContract(ContractDecl(id, expr_a, expr_g, decsP), context)
       case _ => None
     }
     return ASTNode.introducePos(setPosition, setFilename, contractP, contract.position)

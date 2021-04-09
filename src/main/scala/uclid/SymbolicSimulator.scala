@@ -359,13 +359,35 @@ class SymbolicSimulator (module : Module) {
           case "prove_by_contracts" =>
             Console.println(module.contracts.size.toString + " contracts found:")
             module.contracts.foreach{
-              (contract) => Console.println(contract.id + " $$$ " + contract.expr.toString)
+              (contract) => Console.println(contract.id + ": (A: " + contract.expr_a.toString +  ", G: " + contract.expr_g.toString + ")")
             }
             Console.printf("%d Args \n", cmd.args.size)
-            cmd.args.foreach{
-              (arg) => Console.println(arg._1.toString + " ? " + arg._2)
+            cmd.args.size match{
+              case 0 => {
+                Console.println("Proof all contracts and composition of all instances")
+              }
+              case 1 => {
+                Console.println("Proof contracts by composition of all instances")
+                Console.println("Contracts: ")
+                cmd.args(0)._1.asInstanceOf[Tuple].values.foreach{
+                  (id) => Console.println(id.toString)
+                }
+              }
+              case 2 => {
+                Console.println("Proof contracts by composition of certain instances")
+                Console.println("Instances: ")
+                cmd.args(0)._1.asInstanceOf[Tuple].values.foreach{
+                  (id) => Console.println(id.toString)
+                }
+                Console.println("Contracts: ")
+                cmd.args(1)._1.asInstanceOf[Tuple].values.foreach{
+                  (id) => Console.println(id.toString)
+                }
+              }
+              case _ => throw new Utils.AssertionError("Too many arguments: " + cmd.args.size.toString)
             }
-            Console.printf("Test: %d, %d, %b, %b, %b\n", cmd.args.size, cmd.params.size, cmd.resultVar.isEmpty, cmd.argObj.isEmpty, cmd.argObj.isDefined)
+            
+            //Console.printf("Test: %d, %d, %b, %b, %b\n", cmd.args.size, cmd.params.size, cmd.resultVar.isEmpty, cmd.argObj.isEmpty, cmd.argObj.isDefined)
           case _ =>
             throw new Utils.UnimplementedException("Command not supported: " + cmd.toString)
         }
@@ -1377,7 +1399,8 @@ class SymbolicSimulator (module : Module) {
                Scope.ForIndexVar(_ , _)       | Scope.SpecVar(_ , _, _)         |
                Scope.AxiomVar(_ , _, _)       | Scope.VerifResultVar(_, _)      |
                Scope.BlockVar(_, _)           | Scope.SelectorField(_)          |
-               Scope.NonTerminal(_, _, _)     | Scope.Macro(_, _, _)           =>
+               Scope.NonTerminal(_, _, _)     | Scope.Macro(_, _, _)            |
+               Scope.ContractVar(_, _, _, _) =>
              throw new Utils.RuntimeError("Can't have this identifier in assertion: " + namedExpr.toString())
         }
       case None =>
