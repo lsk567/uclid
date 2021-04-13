@@ -357,37 +357,31 @@ class SymbolicSimulator (module : Module) {
             UclidMain.printStatus(cmd.args(0).toString())
             UclidMain.printStatus(cmd.macroBody.toString())
           case "prove_by_contracts" =>
-            Console.println(module.contracts.size.toString + " contracts found:")
+            Console.println(module.contracts.size.toString + " contracts found in the module:")
             module.contracts.foreach{
               (contract) => Console.println(contract.id + ": (A: " + contract.expr_a.toString +  ", G: " + contract.expr_g.toString + ")")
             }
-            Console.printf("%d Args \n", cmd.args.size)
-            cmd.args.size match{
-              case 0 => {
-                Console.println("Proof all contracts and composition of all instances")
-              }
-              case 1 => {
-                Console.println("Proof contracts by composition of all instances")
-                Console.println("Contracts: ")
-                cmd.args(0)._1.asInstanceOf[Tuple].values.foreach{
-                  (id) => Console.println(id.toString)
-                }
-              }
-              case 2 => {
-                Console.println("Proof contracts by composition of certain instances")
-                Console.println("Instances: ")
-                cmd.args(0)._1.asInstanceOf[Tuple].values.foreach{
-                  (id) => Console.println(id.toString)
-                }
-                Console.println("Contracts: ")
-                cmd.args(1)._1.asInstanceOf[Tuple].values.foreach{
-                  (id) => Console.println(id.toString)
-                }
-              }
-              case _ => throw new Utils.AssertionError("Too many arguments: " + cmd.args.size.toString)
+
+            var sys_contract_ids = extractProperties(Identifier("contracts"), cmd.params)
+            var component_ids = extractProperties(Identifier("components"), cmd.params)
+
+            Console.println("Contracts to be proved: ")
+            sys_contract_ids.foreach{
+              (id) => Console.printf(id.toString + " ")
             }
-            
-            //Console.printf("Test: %d, %d, %b, %b, %b\n", cmd.args.size, cmd.params.size, cmd.resultVar.isEmpty, cmd.argObj.isEmpty, cmd.argObj.isDefined)
+            if(sys_contract_ids.size == 0)
+              Console.printf("All contracts")
+            Console.printf("\n")
+
+            Console.println("Components to be composed: ")
+
+            component_ids.foreach{
+              (id) => Console.printf(id.toString + " ")
+            }          
+            if(component_ids.size == 0)
+              Console.printf("All components")
+            Console.printf("\n")
+
           case _ =>
             throw new Utils.UnimplementedException("Command not supported: " + cmd.toString)
         }
