@@ -357,16 +357,28 @@ class SymbolicSimulator (module : Module) {
               Console.printf("All components")
             Console.printf("\n")
 
+            // FIXME: merge all viewpoints here.
+            // Remove existing contract decls and replace them with ONE merged contract.
+
+
             // Need to generate two groups of properties: Validity and Hierarchy
             // Validity: comes from the assume_guarantee statement and produces (A => G)
             // Hierarchy: comes from analyzing nested instances and check whether
             //            the instances can satisfy the high-level contract.
-            Console.println("*** Generating validity properties.")
+            Console.println("*** Generating properties for assume_guarantee().")
 
             val newContext = module.contracts.foldLeft(context){(acc, contract) => {
               val agSpecDecl = SpecDecl(Identifier(contract.id.toString() + "_ag_property"), Operator.imply(contract.expr_a, contract.expr_g), contract.params)
               acc + agSpecDecl
             }}
+
+            
+            Console.println("*** Generating properties for checking contract hierarchy.")
+            // FIXME: TODO
+            // 1. Compose contracts from the nested instances (1 level down).
+            // 2. Generate properties that check the contrapositive relationship
+            //    between the assumptions and guarantees of the composed contract
+            //    and the high-level contract.
             
             UclidMain.println("New module:")
             UclidMain.println(newContext.module.toString)

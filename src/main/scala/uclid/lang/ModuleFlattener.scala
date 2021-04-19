@@ -370,6 +370,9 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
     }
   }
 
+  // FIXME: focus on this rewriteModule
+  // Add "newContracts" into the module
+
   // add new variables and inputs.
   override def rewriteModule(module : Module, context : Scope) : Option[Module] = {
     logger.debug("axioms:\n{}", newAxioms.map("  " + _.toString()))
