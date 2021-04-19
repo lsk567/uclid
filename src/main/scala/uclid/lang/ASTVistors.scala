@@ -1387,6 +1387,7 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
     val decsP = contract.params.map(visitExprDecorator(_, context)).flatten
     val contractP = (idP, exprP_a, exprP_g) match {
       case (Some(id), Some(expr_a), Some(expr_g)) => pass.rewriteContract(ContractDecl(id, expr_a, expr_g, decsP), context)
+      // case (Some(id), Some(expr_a), Some(expr_g)) => SpecDecl(contract.id, Operator.imply(contract.expr_a, contract.expr_g), contract.params)
       case _ => None
     }
     return ASTNode.introducePos(setPosition, setFilename, contractP, contract.position)

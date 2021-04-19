@@ -390,6 +390,25 @@ case class Scope (
     }
     Scope(mapP, module, procedure, Some(command), environment, parent)
   }
+
+  /** Add a new specification to a context. */
+  def +(spec: SpecDecl) : Scope = {
+    val newMap = Scope.addToMap(map, Scope.SpecVar(spec.id, spec.expr, spec.params))
+    val newModule = module match {
+      case Some(m) => {
+        UclidMain.println("Printing inside +():")
+        UclidMain.println(m.decls.toString)
+        UclidMain.println((spec :: m.decls).toString)
+        Some(Module(m.id, (spec :: m.decls), m.cmds, m.notes))
+        }
+      case None => {
+        println("Module is empty!")
+        module
+      }
+    }
+    return Scope(newMap, newModule, procedure, cmd, environment, Some(this))
+  }
+
   /** Return the type of an identifier in this context. */
   def typeOf(id : Identifier) : Option[Type] = {
     map.get(id).flatMap((e) => Some(e.typ))
