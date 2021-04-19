@@ -344,8 +344,12 @@ class SymbolicSimulator (module : Module) {
             sys_contract_ids.foreach{
               (id) => Console.printf(id.toString + " ")
             }
-            if(sys_contract_ids.size == 0)
+            if(sys_contract_ids.size == 0){
+              sys_contract_ids = module.contracts.foldLeft(List.empty[Identifier]){ (acc, contract) =>
+                contract.id :: acc
+              }
               Console.printf("All contracts")
+            }
             Console.printf("\n")
 
             Console.println("Components to be composed: ")
@@ -353,21 +357,52 @@ class SymbolicSimulator (module : Module) {
             component_ids.foreach{
               (id) => Console.printf(id.toString + " ")
             }          
-            if(component_ids.size == 0)
+            if(component_ids.size == 0){
               Console.printf("All components")
+            }
+
             Console.printf("\n")
 
             // FIXME: merge all viewpoints here.
             // Remove existing contract decls and replace them with ONE merged contract.
+            // FIXME check existence of contracts earlier
 
+            var contracts = module.contracts.filter( (contract) => sys_contract_ids.contains(contract.id))
 
+            val assumes = contracts.foldLeft(List.empty[Expr]){(acc, contract) => {contract.expr_a :: acc}}
+            val guarantees = contracts.foldLeft(List.empty[Expr]){(acc, contract) => {contract.expr_g :: acc}}
+            val newAssume = assumes.reduceLeft((acc, assume) => {Operator.and(acc, assume)})
+            val newGuarantee = guarantees.reduceLeft((acc, guarantee) => {Operator.and(acc, guarantee)})
+            val mergedagContractDecl = ContractDecl(Identifier(module.id.toString() + "_system_level_contract"), newAssume , Operator.or(newGuarantee, Operator.not(newAssume)), List.empty)
+            UclidMain.println(mergedagContractDecl.toString)
+            //todo : filter out contract decls in 
+            val newContractDecls : List[Decl] = module.decls.filter( (decl) => 
+              decl match{
+                case ContractDecl(_,_,_,_) => false
+                case _ => true
+              }
+            )
+            val newModule = Module(module.id, mergedagContractDecl :: newContractDecls, module.cmds, module.notes)
+            UclidMain.println(newModule.toString)
+            // if(!module.contracts.isEmpty){
+            //   val newAssume = module.contracts.reduceLeft((acc, contract) => {
+            //       Operator.and(acc, contract.expr_a)
+            //     }
+            //   )
+            //   val newGuarantee = module.contracts.reduceLeft((acc, contract) => {
+            //       Operator.and(acc, contract.expr_g)
+            //     }
+            //   )
+            //   val mergedagSpecDecl = SpecDecl(Identifier(module.id.toString() + "_ag_property_merged"), Operator.imply(newAssume, newGuarantee), List.empty)
+            //   UclidMain.println(mergedagSpecDecl.toString)
+            // }
             // Need to generate two groups of properties: Validity and Hierarchy
             // Validity: comes from the assume_guarantee statement and produces (A => G)
             // Hierarchy: comes from analyzing nested instances and check whether
             //            the instances can satisfy the high-level contract.
             Console.println("*** Generating properties for assume_guarantee().")
 
-            val newContext = module.contracts.foldLeft(context){(acc, contract) => {
+            val newContext = newModule.contracts.foldLeft(context){(acc, contract) => {
               val agSpecDecl = SpecDecl(Identifier(contract.id.toString() + "_ag_property"), Operator.imply(contract.expr_a, contract.expr_g), contract.params)
               acc + agSpecDecl
             }}

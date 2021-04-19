@@ -358,6 +358,8 @@ object UclidMain {
     passManager.addPass(new StatelessAxiomImporter(mainModuleName))
     passManager.addPass(new ExternalSymbolAnalysis())
     passManager.addPass(new ProcedureModifiesRewriter())
+    // merge contract viewpoints
+    passManager.addPass(new ContractViewpointMerger(mainModuleName))
     // flattens modules into main
     passManager.addPass(new ModuleFlattener(mainModuleName))
     // gets rid of modules apart from main
