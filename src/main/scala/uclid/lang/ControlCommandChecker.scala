@@ -223,7 +223,7 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
         checkHasArgObj(cmd, filename, context)
         checkNoResultVar(cmd, filename)
       case "ag" =>
-        checkNoResultVar(cmd, filename)
+        //checkNoResultVar(cmd, filename)
         checkNoArgObj(cmd, filename)
         checkNoArgs(cmd, filename)
         checkHasLessThanThreeParamsOfIdentifiers(cmd, filename)
