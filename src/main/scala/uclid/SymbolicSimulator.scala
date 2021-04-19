@@ -78,7 +78,7 @@ class SymbolicSimulator (module : Module) {
   type FrameHyperTable = SymbolicSimulator.FrameHyperTable
   type SimulationTable = SymbolicSimulator.SimulationTable
 
-  val context = Scope.empty + module
+  var context = Scope.empty + module
   var assertionTree = new AssertionTree()
   val defaultLog = Logger(classOf[SymbolicSimulator])
   val frameLog = Logger("uclid.SymbolicSimulator.frame")
@@ -292,6 +292,10 @@ class SymbolicSimulator (module : Module) {
             def postAssumptionFilter(name : Identifier, decorators : List[ExprDecorator]) : Boolean = {
               !ExprDecorator.isLTLProperty(decorators) && (commandAssumeProperties.contains(name))
             }
+
+            Console.printf(commandProperties.toString())
+            Console.printf(commandPreProperties.toString())
+            Console.printf(commandAssumeProperties.toString())
             
             assertLog.debug("preStateProperties: {}", preStateProperties.toString())
 
@@ -327,6 +331,99 @@ class SymbolicSimulator (module : Module) {
             UclidMain.printStats(f"symbolic simulation for verify took $delta%.1f ms")
             check(solver, config, cmd);
             needToPrintResults=true
+          case "ag" =>
+            Console.println(module.contracts.size.toString + " contracts found in the module:")
+            module.contracts.foreach{
+              (contract) => Console.println(contract.id + ": (A: " + contract.expr_a.toString +  ", G: " + contract.expr_g.toString + ")")
+            }
+
+            var sys_contract_ids = extractProperties(Identifier("contracts"), cmd.params)
+            var component_ids = extractProperties(Identifier("components"), cmd.params)
+
+            Console.println("Contracts to be proved: ")
+            sys_contract_ids.foreach{
+              (id) => Console.printf(id.toString + " ")
+            }
+            if(sys_contract_ids.size == 0)
+              Console.printf("All contracts")
+            Console.printf("\n")
+
+            Console.println("Components to be composed: ")
+
+            component_ids.foreach{
+              (id) => Console.printf(id.toString + " ")
+            }          
+            if(component_ids.size == 0)
+              Console.printf("All components")
+            Console.printf("\n")
+
+            // Need to generate two groups of properties: Validity and Hierarchy
+            // Validity: comes from the assume_guarantee statement and produces (A => G)
+            // Hierarchy: comes from analyzing nested instances and check whether
+            //            the instances can satisfy the high-level contract.
+            Console.println("*** Generating validity properties.")
+
+            val newContext = module.contracts.foldLeft(context){(acc, contract) => {
+              val agSpecDecl = SpecDecl(Identifier(contract.id.toString() + "_ag_property"), Operator.imply(contract.expr_a, contract.expr_g), contract.params)
+              acc + agSpecDecl
+            }}
+            
+            UclidMain.println("New module:")
+            UclidMain.println(newContext.module.toString)
+            UclidMain.println("New map:")
+            UclidMain.println(newContext.map.toString)
+            UclidMain.println("New specs:")
+            UclidMain.println(newContext.specs.toString)
+            
+            // Pasted from induction: perform induction
+            assertionTree.startVerificationScope()
+            val labelBase : String = cmd.resultVar match {
+              case Some(l) => l.toString + ": induction_base"
+              case None    => "induction_base"
+            }
+            val labelStep : String = cmd.resultVar match {
+              case Some(l) => l.toString + ": induction_step"
+              case None    => "induction_step"
+            }
+            val k = if (cmd.args.size > 0) {
+              cmd.args(0)._1.asInstanceOf[IntLit].value.toInt
+            } else { 1 }
+
+            // extract properties to be proven.
+            val commandProperties : List[Identifier] = extractProperties(Identifier("properties"), cmd.params)
+            val commandPreProperties : List[Identifier] = extractProperties(Identifier("pre"), cmd.params)
+            val commandAssumeProperties: List[Identifier] = extractProperties(Identifier("assumptions"), cmd.params)
+            val preStateProperties = if (commandPreProperties.size == 0) {
+              commandProperties ++ commandAssumeProperties
+            } else {
+              commandProperties ++ commandAssumeProperties ++ commandPreProperties
+            }
+            val assumptionFilter = createNoLTLFilter(preStateProperties)
+            val propertyFilter = createNoLTLFilter(commandProperties)
+            def postAssumptionFilter(name : Identifier, decorators : List[ExprDecorator]) : Boolean = {
+              !ExprDecorator.isLTLProperty(decorators) && (commandAssumeProperties.contains(name))
+            }
+
+            assertLog.debug("preStateProperties: {}", preStateProperties.toString())
+
+            // base case.
+            resetState()
+            initialize(false, true, false, newContext, labelBase, assumptionFilter, propertyFilter)
+            symbolicSimulate(0, k-1, true, false, newContext, labelBase, assumptionFilter, propertyFilter) // if k - 1 = 0, symbolicSimulate is a NOP.
+
+            // inductive step
+            resetState()
+            // we are assuming that the assertions hold for k-1 steps (by passing false, true to initialize and symbolicSimulate)
+            initialize(true, false, true, newContext, labelStep, assumptionFilter, propertyFilter)
+            if ((k - 1) > 0) {
+              symbolicSimulate(0, k-1, false, true, newContext, labelStep, assumptionFilter, propertyFilter)
+            }
+            // now are asserting that the assertion holds by pass true, false to symbolicSimulate.
+            symbolicSimulate(k-1, 1, true,  false, newContext, labelStep, assumptionFilter, propertyFilter)
+
+            // go back to original state.
+            resetState()
+
           case "check" => {
             // deprecated command: do nothing because we checked after every verification command
           } 
@@ -1577,7 +1674,13 @@ class SymbolicSimulator (module : Module) {
                 addAssert : (AssertInfo => Unit)) {
 
     scope.specs.foreach(specVar => {
-      val prop = module.properties.find(p => p.id == specVar.varId).get
+      UclidMain.println("SpecVar: " + specVar.varId.toString)
+      UclidMain.println("Module.properties:")
+      UclidMain.println(scope.module.get.properties.toString)
+      
+      // FIXME: a UCLID bug here? scope.module instead of the original module?
+      // val prop = module.properties.find(p => p.id == specVar.varId).get
+      val prop = scope.module.get.properties.find(p => p.id == specVar.varId).get
       if (filter(prop.id, prop.params)) {
         val property = AssertInfo(
             prop.name, label, simTbl.map(ft => ft.clone()), scope, frameNumber, smt.BooleanLit(true),
@@ -1598,7 +1701,9 @@ class SymbolicSimulator (module : Module) {
                        addAssumption : (smt.Expr, List[ExprDecorator]) => Unit) {
     scope.specs.foreach(sp => 
       {
-        val prop = module.properties.find(p => p.id == sp.varId).get
+        // FIXME: a UCLID bug here? scope.module instead of the original module?
+        // val prop = module.properties.find(p => p.id == sp.varId).get
+        val prop = scope.module.get.properties.find(p => p.id == sp.varId).get
         if (filter(prop.id, prop.params)) {
           assertLog.debug("selected: {}", prop.id.toString())
           addAssumption(evaluate(sp.expr, symbolTable, frameTbl, frameNumber, scope), sp.params)

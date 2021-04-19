@@ -1,0 +1,10 @@
+
+module minimal {
+    
+    property p1 : false;
+    property p2 : true;
+
+    control {
+        print_module;
+    }
+}

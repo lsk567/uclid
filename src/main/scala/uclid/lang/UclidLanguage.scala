@@ -1435,10 +1435,10 @@ case class ContractDecl(id: Identifier, expr_a: Expr, expr_g: Expr, params: List
     } else {
       ""
     }
-    "%s %s%s,%s : %s; // %s".format("contract ", id.toString, declString, expr_a.toString, expr_g.toString, position.toString)
+    "%s %s%s : (A: %s, G: %s); // %s".format("contract", id.toString, declString, expr_a.toString, expr_g.toString, position.toString)
   }
   override def declNames = List(id)
-  def name = "%s %s".format("contract ", id.toString())
+  def name = "%s %s".format("contract", id.toString())
 }
 
 sealed abstract class ProofCommand extends ASTNode
