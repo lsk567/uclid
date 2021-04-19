@@ -15,24 +15,24 @@ class ContractViewpointMergerPass(moduleName : Identifier) extends RewritePass {
               contract.expr_g :: acc
             }
         }
-        val AssumeConjunction = assumes.reduceLeft((acc, assume) => {
+        val assumeConjunction = assumes.reduceLeft((acc, assume) => {
             Operator.and(acc, assume)
           }
         )
-        val GuaranteeConjunction = guarantees.reduceLeft((acc, guarantee) => {
+        val guaranteeConjunction = guarantees.reduceLeft((acc, guarantee) => {
             Operator.and(acc, guarantee)
           }
         )
-        val mergedagContractDecl = ContractDecl(Identifier(module.id.toString() + "_system_level_contract"), AssumeConjunction , Operator.or(GuaranteeConjunction, Operator.not(AssumeConjunction)), List.empty)
-        UclidMain.println(mergedagContractDecl.toString)
+        val mergedagContractDecl = ContractDecl(Identifier(module.id.toString() + "_system_level_contract"), assumeConjunction , Operator.or(guaranteeConjunction, Operator.not(assumeConjunction)), List.empty)
+        //UclidMain.println(mergedagContractDecl.toString)
         //todo : filter out contract decls in 
-        val newContractDecls : List[Decl] = module.decls.filter( (decl) => 
+        val newContractDecls : List[Decl] = mergedagContractDecl :: module.decls.filter( (decl) => 
           decl match{
             case ContractDecl(_,_,_,_) => false
             case _ => true
           }
         )
-        val newModule = Module(module.id, mergedagContractDecl :: newContractDecls, module.cmds, module.notes)
+        val newModule = Module(module.id, newContractDecls, module.cmds, module.notes)
         //UclidMain.println(newModule.toString)
 		Some(newModule)
     }
