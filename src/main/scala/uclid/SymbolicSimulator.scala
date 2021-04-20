@@ -325,21 +325,16 @@ class SymbolicSimulator (module : Module) {
             // FIXME check existence of contracts earlier
 
             var contracts = module.contracts.filter( (contract) => sys_contract_ids.contains(contract.id))
-
-            val assumes = contracts.foldLeft(List.empty[Expr]){(acc, contract) => {contract.expr_a :: acc}}
-            val guarantees = contracts.foldLeft(List.empty[Expr]){(acc, contract) => {contract.expr_g :: acc}}
-            val assumeConjunction = assumes.reduceLeft((acc, assume) => {Operator.and(acc, assume)})
-            val guaranteeConjunction = guarantees.reduceLeft((acc, guarantee) => {Operator.and(acc, guarantee)})
-            val mergedagContractDecl = ContractDecl(Identifier(module.id.toString() + "_system_level_contract"), assumeConjunction , Operator.or(guaranteeConjunction, Operator.not(assumeConjunction)), List.empty)
+            val mergedagContractDecl = ContractOperation.merging(contracts, Identifier(module.id.toString() + "_system_level_contract"))
             UclidMain.println(mergedagContractDecl.toString)
             //todo : filter out contract decls in 
-            val newContractDecls : List[Decl] = mergedagContractDecl :: module.decls.filter( (decl) => 
+            val newDecls : List[Decl] = mergedagContractDecl :: module.decls.filter( (decl) => 
               decl match{
                 case ContractDecl(_,_,_,_) => false
                 case _ => true
               }
             )
-            val newModule = Module(module.id, newContractDecls, module.cmds, module.notes)
+            val newModule = Module(module.id, newDecls, module.cmds, module.notes)
             UclidMain.println(newModule.toString)
             // if(!module.contracts.isEmpty){
             //   val newAssume = module.contracts.reduceLeft((acc, contract) => {
