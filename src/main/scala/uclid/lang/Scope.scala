@@ -424,13 +424,13 @@ case class Scope (
     val newMap = Scope.addToMap(map, Scope.SpecVar(spec.id, spec.expr, spec.params))
     val newModule = module match {
       case Some(m) => {
-        UclidMain.println("Printing inside +():")
-        UclidMain.println(m.decls.toString)
-        UclidMain.println((spec :: m.decls).toString)
+        //UclidMain.println("Printing inside +():")
+        //UclidMain.println(m.decls.toString)
+        //UclidMain.println((spec :: m.decls).toString)
         Some(Module(m.id, (spec :: m.decls), m.cmds, m.notes))
         }
       case None => {
-        println("Module is empty!")
+        //println("Module is empty!")
         module
       }
     }

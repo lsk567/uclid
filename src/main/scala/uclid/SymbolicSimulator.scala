@@ -340,82 +340,90 @@ class SymbolicSimulator (module : Module) {
             var sys_contract_ids = extractProperties(Identifier("contracts"), cmd.params)
             var component_ids = extractProperties(Identifier("components"), cmd.params)
 
-            Console.println("Contracts to be proved: ")
-            sys_contract_ids.foreach{
-              (id) => Console.printf(id.toString + " ")
-            }
             if(sys_contract_ids.size == 0){
               sys_contract_ids = module.contracts.foldLeft(List.empty[Identifier]){ (acc, contract) =>
                 contract.id :: acc
               }
-              Console.printf("All contracts")
             }
+            UclidMain.println("Contracts to be proved: ")
+            sys_contract_ids.foreach{
+              (id) => Console.printf(id.toString + " ")
+            }
+
             Console.printf("\n")
 
-            Console.println("Components to be composed: ")
+            if(component_ids.size == 0){
+              component_ids = module.contracts.foldLeft(List.empty[Identifier]){
+                (acc, contract) => {
+                  if(contract.params.size < 2)
+                    acc
+                  else{
+                    Identifier(contract.params(1).asInstanceOf[UnknownDecorator].value) :: acc
+                  }
+                }
+              }
+            }
+            UclidMain.println("Components to be composed: ")
 
             component_ids.foreach{
               (id) => Console.printf(id.toString + " ")
             }          
-            if(component_ids.size == 0){
-              Console.printf("All components")
-            }
-
             Console.printf("\n")
 
-            // FIXME: merge all viewpoints here.
+            // Merge all viewpoints
             // Remove existing contract decls and replace them with ONE merged contract.
-            // FIXME check existence of contracts earlier
-
             var contracts = module.contracts.filter( (contract) => sys_contract_ids.contains(contract.id))
             val mergedagContractDecl = ContractOperation.merging(contracts, Identifier(module.id.toString() + "_system_level_contract"))
             UclidMain.println(mergedagContractDecl.toString)
-            //todo : filter out contract decls in 
-            val newDecls : List[Decl] = mergedagContractDecl :: module.decls.filter( (decl) => 
-              decl match{
-                case ContractDecl(_,_,_,_) => false
-                case _ => true
-              }
-            )
-            val newModule = Module(module.id, newDecls, module.cmds, module.notes)
-            UclidMain.println(newModule.toString)
-            // if(!module.contracts.isEmpty){
-            //   val newAssume = module.contracts.reduceLeft((acc, contract) => {
-            //       Operator.and(acc, contract.expr_a)
-            //     }
-            //   )
-            //   val newGuarantee = module.contracts.reduceLeft((acc, contract) => {
-            //       Operator.and(acc, contract.expr_g)
-            //     }
-            //   )
-            //   val mergedagSpecDecl = SpecDecl(Identifier(module.id.toString() + "_ag_property_merged"), Operator.imply(newAssume, newGuarantee), List.empty)
-            //   UclidMain.println(mergedagSpecDecl.toString)
-            // }
+
+            var newDecls : List[Decl] = mergedagContractDecl :: module.decls
+            var newModule = Module(module.id, newDecls, module.cmds, module.notes)
+            var newContext = Scope.empty + newModule
             // Need to generate two groups of properties: Validity and Hierarchy
             // Validity: comes from the assume_guarantee statement and produces (A => G)
             // Hierarchy: comes from analyzing nested instances and check whether
             //            the instances can satisfy the high-level contract.
-            Console.println("*** Generating properties for assume_guarantee().")
-
-            val newContext = newModule.contracts.foldLeft(context){(acc, contract) => {
-              val agSpecDecl = SpecDecl(Identifier(contract.id.toString() + "_ag_property"), Operator.imply(contract.expr_a, contract.expr_g), contract.params)
-              acc + agSpecDecl
-            }}
-
-            
             Console.println("*** Generating properties for checking contract hierarchy.")
-            // FIXME: TODO
             // 1. Compose contracts from the nested instances (1 level down).
             // 2. Generate properties that check the contrapositive relationship
             //    between the assumptions and guarantees of the composed contract
             //    and the high-level contract.
+            val hierContracts = module.contracts.filter(
+              (contract) => {
+                if(contract.params.isEmpty)
+                  false
+                else{
+                  //UclidMain.println(contract.params(0).asInstanceOf[UnknownDecorator].value)
+                  contract.params(0).asInstanceOf[UnknownDecorator].value == "Hierarchy" && component_ids.contains(Identifier(contract.params(1).asInstanceOf[UnknownDecorator].value))
+                }
+              }
+            )
+            UclidMain.println(hierContracts.toString)
+            if(!hierContracts.isEmpty){
+              val composedContracts = ContractOperation.composition(hierContracts, Identifier(module.id.toString() + "_submodule_contract"))
+              val refineSpecDecl_A = SpecDecl(Identifier(module.id.toString() + "_ag_property_refineA"), Operator.imply(mergedagContractDecl.expr_a, composedContracts.expr_a), List.empty)
+              val refineSpecDecl_G = SpecDecl(Identifier(module.id.toString() + "_ag_property_refineG"), Operator.imply(composedContracts.expr_g, mergedagContractDecl.expr_g), List.empty)
+              newDecls = composedContracts :: newModule.decls
+              newModule = Module(newModule.id, newDecls, newModule.cmds, newModule.notes)
+              newContext = Scope.empty + newModule + refineSpecDecl_A + refineSpecDecl_G
+            }
             
+
+            Console.println("*** Generating properties for assume_guarantee().")
+
+            newContext = newModule.contracts.filter(
+              (contract) => contract.params.isEmpty
+            ).foldLeft(newContext){(acc, contract) => {
+              val agSpecDecl = SpecDecl(Identifier(contract.id.toString() + "_ag_property"), Operator.imply(contract.expr_a, contract.expr_g), contract.params)
+              acc + agSpecDecl
+            }}
+
             UclidMain.println("New module:")
             UclidMain.println(newContext.module.toString)
-            UclidMain.println("New map:")
-            UclidMain.println(newContext.map.toString)
-            UclidMain.println("New specs:")
-            UclidMain.println(newContext.specs.toString)
+            // UclidMain.println("New map:")
+            // UclidMain.println(newContext.map.toString)
+            // UclidMain.println("New specs:")
+            // UclidMain.println(newContext.specs.toString)
             
             // Pasted from induction: perform induction
             assertionTree.startVerificationScope()
@@ -1716,9 +1724,9 @@ class SymbolicSimulator (module : Module) {
                 addAssert : (AssertInfo => Unit)) {
 
     scope.specs.foreach(specVar => {
-      UclidMain.println("SpecVar: " + specVar.varId.toString)
-      UclidMain.println("Module.properties:")
-      UclidMain.println(scope.module.get.properties.toString)
+      //UclidMain.println("SpecVar: " + specVar.varId.toString)
+      //UclidMain.println("Module.properties:")
+      //UclidMain.println(scope.module.get.properties.toString)
       
       // FIXME: a UCLID bug here? scope.module instead of the original module?
       // val prop = module.properties.find(p => p.id == specVar.varId).get
