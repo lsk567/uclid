@@ -25,7 +25,7 @@ object ContractOperation{
 	        Operator.and(acc, guarantee)
 	      }
 	    )
-	    val composedagContractDecl = ContractDecl(name, Operator.or(assumeConjunction, Operator.not(guaranteeConjunction)) , guaranteeConjunction, List.empty)
+	    val composedagContractDecl = ContractDecl(name, Operator.or(assumeConjunction, Operator.not(guaranteeConjunction)) , guaranteeConjunction, UnknownDecorator("Composed") :: List.empty)
 		composedagContractDecl
 	}
 
@@ -58,7 +58,7 @@ object ContractOperation{
 	        Operator.and(acc, guarantee)
 	      }
 	    )
-	    val mergedagContractDecl = ContractDecl(name, assumeConjunction , Operator.or(guaranteeConjunction, Operator.not(assumeConjunction)), List.empty)
+	    val mergedagContractDecl = ContractDecl(name, assumeConjunction , Operator.or(guaranteeConjunction, Operator.not(assumeConjunction)), UnknownDecorator("Merged") :: List.empty)
 		mergedagContractDecl
 	}
 }

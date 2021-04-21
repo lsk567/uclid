@@ -13,7 +13,6 @@ class ContractSaturator() extends ASTRewriter(
 class ContractViewpointMergerPass(moduleName : Identifier) extends RewritePass {
   override def rewriteModule(module : Module, ctx : Scope) : Option[Module] = {
     if (module.id == moduleName) {
-      //UclidMain.println("Main module: "+ module.id.toString)
       Some(module)
     } else {
         val mergedagContractDecl = ContractOperation.merging(module.contracts, Identifier(module.id.toString() + "_system_level_contract"))
@@ -25,7 +24,7 @@ class ContractViewpointMergerPass(moduleName : Identifier) extends RewritePass {
         )
         val newModule = Module(module.id, newDecls, module.cmds, module.notes)
         //UclidMain.println(newModule.toString)
-		Some(newModule)
+		  Some(newModule)
     }
   }
 }
