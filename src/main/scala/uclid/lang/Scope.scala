@@ -437,6 +437,23 @@ case class Scope (
     return Scope(newMap, newModule, procedure, cmd, environment, Some(this))
   }
 
+  def +(c: ContractDecl) : Scope = {
+    val newMap = Scope.addToMap(map, Scope.ContractVar(c.id, c.expr_a, c.expr_g, c.params))
+    val newModule = module match {
+      case Some(m) => {
+        //UclidMain.println("Printing inside +():")
+        //UclidMain.println(m.decls.toString)
+        //UclidMain.println((spec :: m.decls).toString)
+        Some(Module(m.id, (c :: m.decls), m.cmds, m.notes))
+        }
+      case None => {
+        println("Module is empty!")
+        module
+      }
+    }
+    return Scope(newMap, newModule, procedure, cmd, environment, Some(this))
+  }
+
   /** Return the type of an identifier in this context. */
   def typeOf(id : Identifier) : Option[Type] = {
     map.get(id).flatMap((e) => Some(e.typ))

@@ -15,6 +15,9 @@ class ContractViewpointMergerPass(moduleName : Identifier) extends RewritePass {
     if (module.id == moduleName) {
       Some(module)
     } else {
+        if(module.contracts.isEmpty){
+          return Some(module)
+        }
         val mergedagContractDecl = ContractOperation.merging(module.contracts, Identifier(module.id.toString() + "_system_level_contract"))
         val newDecls : List[Decl] = mergedagContractDecl :: module.decls.filter( (decl) => 
           decl match{
