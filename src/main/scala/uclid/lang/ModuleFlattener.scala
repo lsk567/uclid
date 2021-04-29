@@ -376,7 +376,15 @@ class ModuleInstantiatorPass(module : Module, inst : InstanceDecl, targetModule 
   // add new variables and inputs.
   override def rewriteModule(module : Module, context : Scope) : Option[Module] = {
     logger.debug("axioms:\n{}", newAxioms.map("  " + _.toString()))
-    val newContracts = newModule.contracts.map((c) => ContractDecl(c.id, c.expr_a, c.expr_g, UnknownDecorator("Hierarchy") :: UnknownDecorator(inst.instanceId.toString) :: List.empty))
+    val newContracts = newModule.contracts.filter((c) =>   
+    {              
+      if(c.params.isEmpty)
+        false
+      else{
+        c.params(0).asInstanceOf[UnknownDecorator].value == "Merged"
+      }
+    }
+    ).map((c) => ContractDecl(Identifier(inst.instanceId.toString + "_system_level_contract"), c.expr_a, c.expr_g, UnknownDecorator("Hierarchy") :: UnknownDecorator(inst.instanceId.toString) :: List.empty))
     val declsP : List[Decl] = newVariables ++ newInputs ++ newAxioms ++ module.decls ++ newContracts
     val moduleP = Module(module.id, declsP, module.cmds, module.notes)
     Some(moduleP)
