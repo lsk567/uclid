@@ -288,7 +288,118 @@ class SymbolicSimulator (module : Module) {
               case None    => "verify_%s".format(procName.toString)
             }
             verifyProcedure(proc, label)
-          case "ag" =>
+          case "ag_induction" =>
+            Console.println(module.contracts.size.toString + " contracts found in the module:")
+            module.contracts.foreach{
+              (contract) => Console.println(contract.id + ": (A: " + contract.expr_a.toString +  ", G: " + contract.expr_g.toString + ")")
+            }
+
+            var sys_contract_ids = extractProperties(Identifier("contracts"), cmd.params)
+            var component_ids = extractProperties(Identifier("components"), cmd.params)
+            // Collect system level contracts to be merged
+            // If not specified, then collect all system viewpoints
+            if(sys_contract_ids.size == 0){
+              sys_contract_ids = module.contracts.foldLeft(List.empty[Identifier]){ (acc, contract) =>
+                  if(contract.params.isEmpty)
+                    contract.id :: acc
+                  else{
+                    acc
+                  }
+                
+              }
+            }
+            UclidMain.println("Contracts to be proved: ")
+            sys_contract_ids.foreach{
+              (id) => Console.printf(id.toString + " ")
+            }
+            Console.printf("\n")
+            // Collect all instances name
+            // If not specified, then collect all instances that have contracts defined
+            if(component_ids.size == 0){
+              component_ids = module.contracts.foldLeft(List.empty[Identifier]){
+                (acc, contract) => {
+                  if(contract.params.size < 2)
+                    acc
+                  else{
+                    Identifier(contract.params(1).asInstanceOf[UnknownDecorator].value) :: acc
+                  }
+                }
+              }
+            }
+
+            // Merge all viewpoints
+            Console.println("*** Generating system level contracts from viewpoints.")
+            var contracts = module.contracts.filter( (contract) => sys_contract_ids.contains(contract.id))
+            if(contracts.isEmpty){
+              throw new Utils.AssertionError("No system level contracts to be checked! ") 
+            }
+            val mergedagContractDecl = ContractOperation.merging(contracts, Identifier(module.id.toString() + "_system_level_contract"))
+            var newContext = context + mergedagContractDecl
+            UclidMain.println("  Merged Contract: "+ mergedagContractDecl.toString)
+            
+            Console.println("*** Generating properties for assume_guarantee().")
+
+            newContext = contracts.foldLeft(newContext){(acc, contract) => {
+              val agSpecDecl = SpecDecl(Identifier(contract.id.toString() + "_ag_property"), Operator.imply(contract.expr_a, contract.expr_g), contract.params)
+              acc + agSpecDecl
+            }}
+
+            UclidMain.println("New module:")
+            UclidMain.println(newContext.module.toString)
+            // UclidMain.println("New map:")
+            // UclidMain.println(newContext.map.toString)
+            // UclidMain.println("New specs:")
+            // UclidMain.println(newContext.specs.toString)
+            
+            // Pasted from induction: perform induction
+            assertionTree.startVerificationScope()
+            val labelBase : String = cmd.resultVar match {
+              case Some(l) => l.toString + ": induction_base"
+              case None    => "induction_base"
+            }
+            val labelStep : String = cmd.resultVar match {
+              case Some(l) => l.toString + ": induction_step"
+              case None    => "induction_step"
+            }
+            val k = if (cmd.args.size > 0) {
+              cmd.args(0)._1.asInstanceOf[IntLit].value.toInt
+            } else { 1 }
+
+            // extract properties to be proven.
+            val commandProperties : List[Identifier] = extractProperties(Identifier("properties"), cmd.params)
+            val commandPreProperties : List[Identifier] = extractProperties(Identifier("pre"), cmd.params)
+            val commandAssumeProperties: List[Identifier] = extractProperties(Identifier("assumptions"), cmd.params)
+            val preStateProperties = if (commandPreProperties.size == 0) {
+              commandProperties ++ commandAssumeProperties
+            } else {
+              commandProperties ++ commandAssumeProperties ++ commandPreProperties
+            }
+            val assumptionFilter = createNoLTLFilter(preStateProperties)
+            val propertyFilter = createNoLTLFilter(commandProperties)
+            def postAssumptionFilter(name : Identifier, decorators : List[ExprDecorator]) : Boolean = {
+              !ExprDecorator.isLTLProperty(decorators) && (commandAssumeProperties.contains(name))
+            }
+
+            assertLog.debug("preStateProperties: {}", preStateProperties.toString())
+
+            // base case.
+            resetState()
+            initialize(false, true, false, newContext, labelBase, assumptionFilter, propertyFilter)
+            symbolicSimulate(0, k-1, true, false, newContext, labelBase, assumptionFilter, propertyFilter) // if k - 1 = 0, symbolicSimulate is a NOP.
+
+            // inductive step
+            resetState()
+            // we are assuming that the assertions hold for k-1 steps (by passing false, true to initialize and symbolicSimulate)
+            initialize(true, false, true, newContext, labelStep, assumptionFilter, propertyFilter)
+            if ((k - 1) > 0) {
+              symbolicSimulate(0, k-1, false, true, newContext, labelStep, assumptionFilter, propertyFilter)
+            }
+            // now are asserting that the assertion holds by pass true, false to symbolicSimulate.
+            symbolicSimulate(k-1, 1, true,  false, newContext, labelStep, assumptionFilter, propertyFilter)
+
+            // go back to original state.
+            resetState()
+          case "ag_hierarchy" =>
             Console.println(module.contracts.size.toString + " contracts found in the module:")
             module.contracts.foreach{
               (contract) => Console.println(contract.id + ": (A: " + contract.expr_a.toString +  ", G: " + contract.expr_g.toString + ")")
@@ -368,14 +479,6 @@ class SymbolicSimulator (module : Module) {
               newContext = newContext + refineSpecDecl_A + refineSpecDecl_G + composedContracts
             }
             
-
-            Console.println("*** Generating properties for assume_guarantee().")
-
-            newContext = contracts.foldLeft(newContext){(acc, contract) => {
-              val agSpecDecl = SpecDecl(Identifier(contract.id.toString() + "_ag_property"), Operator.imply(contract.expr_a, contract.expr_g), contract.params)
-              acc + agSpecDecl
-            }}
-
             UclidMain.println("New module:")
             UclidMain.println(newContext.module.toString)
             // UclidMain.println("New map:")
