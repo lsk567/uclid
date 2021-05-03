@@ -241,7 +241,12 @@ class ControlCommandCheckerPass extends ReadOnlyPass[Unit] {
         checkHasOneIdentifierArg(cmd, filename)
         checkHasMacroBody(cmd, filename)
         checkHasValidMacroIdentifier(cmd, filename, context)
-      case "ag" =>
+      case "ag_induction" =>
+        //checkNoResultVar(cmd, filename)
+        checkNoArgObj(cmd, filename)
+        checkNoArgs(cmd, filename)
+        checkHasLessThanThreeParamsOfIdentifiers(cmd, filename)
+      case "ag_hierarchy" =>
         //checkNoResultVar(cmd, filename)
         checkNoArgObj(cmd, filename)
         checkNoArgs(cmd, filename)
