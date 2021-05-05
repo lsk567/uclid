@@ -327,20 +327,30 @@ class SymbolicSimulator (module : Module) {
               }
             }
 
-            // Merge all viewpoints
-            Console.println("*** Generating system level contracts from viewpoints.")
+            Console.println("*** Generating assume environment from assume_guarantee.")
             var contracts = module.contracts.filter( (contract) => sys_contract_ids.contains(contract.id))
             if(contracts.isEmpty){
               throw new Utils.AssertionError("No system level contracts to be checked! ") 
             }
-            val mergedagContractDecl = ContractOperation.merging(contracts, Identifier(module.id.toString() + "_system_level_contract"))
-            var newContext = context + mergedagContractDecl
-            UclidMain.println("  Merged Contract: "+ mergedagContractDecl.toString)
+            // insert assume statement in init/next blocks from assume
             
+            val newInitNextModule = contracts.foldLeft(module){ (acc, c) =>
+              val envstmt = AssumeStmt(c.expr_a, None)
+              val initBody = acc.init.get.body.asInstanceOf[BlockStmt]
+              val nextBody = acc.next.get.body.asInstanceOf[BlockStmt]
+              val newInitBody = BlockStmt(initBody.vars, envstmt :: initBody.stmts)
+              val newNextBody = BlockStmt(nextBody.vars, envstmt :: nextBody.stmts)
+              val newInit = InitDecl(newInitBody)
+              val newNext = NextDecl(newNextBody)
+              val newDecls = newInit :: newNext :: acc.decls.filter((d) => !d.isInstanceOf[InitDecl] && !d.isInstanceOf[NextDecl])
+              Module(acc.id, newDecls, acc.cmds, acc.notes)
+            }
+            var newContext = Scope.empty + newInitNextModule
+            //generate property from guarantee
             Console.println("*** Generating properties for assume_guarantee().")
 
             newContext = contracts.foldLeft(newContext){(acc, contract) => {
-              val agSpecDecl = SpecDecl(Identifier(contract.id.toString() + "_ag_property"), Operator.imply(contract.expr_a, contract.expr_g), contract.params)
+              val agSpecDecl = SpecDecl(Identifier(contract.id.toString() + "_ag_property"), contract.expr_g, contract.params)
               acc + agSpecDecl
             }}
 
@@ -521,18 +531,6 @@ class SymbolicSimulator (module : Module) {
             resetState()
             initialize(false, true, false, newContext, labelBase, assumptionFilter, propertyFilter)
             symbolicSimulate(0, k-1, true, false, newContext, labelBase, assumptionFilter, propertyFilter) // if k - 1 = 0, symbolicSimulate is a NOP.
-
-            // inductive step
-            resetState()
-            // we are assuming that the assertions hold for k-1 steps (by passing false, true to initialize and symbolicSimulate)
-            initialize(true, false, true, newContext, labelStep, assumptionFilter, propertyFilter)
-            if ((k - 1) > 0) {
-              symbolicSimulate(0, k-1, false, true, newContext, labelStep, assumptionFilter, propertyFilter)
-            }
-            // now are asserting that the assertion holds by pass true, false to symbolicSimulate.
-            symbolicSimulate(k-1, 1, true,  false, newContext, labelStep, assumptionFilter, propertyFilter)
-
-            // go back to original state.
             resetState()
 
           case "check" => {
