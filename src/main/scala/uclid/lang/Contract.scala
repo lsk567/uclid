@@ -58,7 +58,7 @@ object ContractOperation{
 	        Operator.and(acc, guarantee)
 	      }
 	    )
-	    val mergedagContractDecl = ContractDecl(name, assumeConjunction , Operator.or(guaranteeConjunction, Operator.not(assumeConjunction)), UnknownDecorator("Merged") :: List.empty)
-		mergedagContractDecl
+	    val mergedAgContractDecl = ContractDecl(name, assumeConjunction , Operator.or(guaranteeConjunction, Operator.not(assumeConjunction)), UnknownDecorator("Merged") :: List.empty)
+		mergedAgContractDecl
 	}
 }

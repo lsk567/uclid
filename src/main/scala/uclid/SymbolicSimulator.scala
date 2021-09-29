@@ -390,6 +390,7 @@ class SymbolicSimulator (module : Module) {
               !ExprDecorator.isLTLProperty(decorators) && (commandAssumeProperties.contains(name))
             }
 
+            UclidMain.println("preStateProperties: " + preStateProperties.toString())
             assertLog.debug("preStateProperties: {}", preStateProperties.toString())
 
             // base case.
@@ -512,6 +513,7 @@ class SymbolicSimulator (module : Module) {
 
             // extract properties to be proven.
             val commandProperties : List[Identifier] = extractProperties(Identifier("properties"), cmd.params)
+            // UclidMain.println("Properties extracted: \n" + commandProperties)
             val commandPreProperties : List[Identifier] = extractProperties(Identifier("pre"), cmd.params)
             val commandAssumeProperties: List[Identifier] = extractProperties(Identifier("assumptions"), cmd.params)
             val preStateProperties = if (commandPreProperties.size == 0) {
@@ -528,9 +530,20 @@ class SymbolicSimulator (module : Module) {
             assertLog.debug("preStateProperties: {}", preStateProperties.toString())
 
             // base case.
+            // resetState()
+            // initialize(false, true, false, newContext, labelBase, assumptionFilter, propertyFilter)
+            // symbolicSimulate(0, k-1, true, false, newContext, labelBase, assumptionFilter, propertyFilter) // if k - 1 = 0, symbolicSimulate is a NOP.
+            
+            // inductive step
             resetState()
-            initialize(false, true, false, newContext, labelBase, assumptionFilter, propertyFilter)
-            symbolicSimulate(0, k-1, true, false, newContext, labelBase, assumptionFilter, propertyFilter) // if k - 1 = 0, symbolicSimulate is a NOP.
+            // we are assuming that the assertions hold for k-1 steps (by passing false, true to initialize and symbolicSimulate)
+            initialize(true, false, true, newContext, labelStep, assumptionFilter, propertyFilter)
+            if ((k - 1) > 0) {
+              symbolicSimulate(0, k-1, false, true, newContext, labelStep, assumptionFilter, propertyFilter)
+            }
+            // now are asserting that the assertion holds by pass true, false to symbolicSimulate.
+            symbolicSimulate(k-1, 1, true,  false, newContext, labelStep, assumptionFilter, propertyFilter)
+
             resetState()
 
           case "check" => {
