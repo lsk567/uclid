@@ -332,7 +332,6 @@ class SymbolicSimulator (module : Module) {
             check(solver, config, cmd);
             needToPrintResults=true
           case "ag_induction" =>
-            Console.println(module.contracts.size.toString + " contracts found in the module:")
             module.contracts.foreach{
               (contract) => Console.println(contract.id + ": (A: " + contract.expr_a.toString +  ", G: " + contract.expr_g.toString + ")")
             }
@@ -351,11 +350,7 @@ class SymbolicSimulator (module : Module) {
                 
               }
             }
-            UclidMain.println("Contracts to be proved: ")
-            sys_contract_ids.foreach{
-              (id) => Console.printf(id.toString + " ")
-            }
-            Console.printf("\n")
+            
             // Collect all instances name
             // If not specified, then collect all instances that have contracts defined
             if(component_ids.size == 0){
@@ -389,20 +384,11 @@ class SymbolicSimulator (module : Module) {
               Module(acc.id, newDecls, acc.cmds, acc.notes)
             }
             var newContext = Scope.empty + newInitNextModule
-            //generate property from guarantee
-            Console.println("*** Generating properties for assume_guarantee().")
-
+            // generate property from contract
             newContext = contracts.foldLeft(newContext){(acc, contract) => {
               val agSpecDecl = SpecDecl(Identifier(contract.id.toString() + "_ag_property"), contract.expr_g, contract.params)
               acc + agSpecDecl
             }}
-
-            UclidMain.println("New module:")
-            UclidMain.println(newContext.module.toString)
-            // UclidMain.println("New map:")
-            // UclidMain.println(newContext.map.toString)
-            // UclidMain.println("New specs:")
-            // UclidMain.println(newContext.specs.toString)
             
             // Pasted from induction: perform induction
             assertionTree.startVerificationScope()
@@ -454,11 +440,6 @@ class SymbolicSimulator (module : Module) {
             // go back to original state.
             resetState()
           case "ag_hierarchy" =>
-            Console.println(module.contracts.size.toString + " contracts found in the module:")
-            module.contracts.foreach{
-              (contract) => Console.println(contract.id + ": (A: " + contract.expr_a.toString +  ", G: " + contract.expr_g.toString + ")")
-            }
-
             var sys_contract_ids = extractProperties(Identifier("contracts"), cmd.params)
             var component_ids = extractProperties(Identifier("components"), cmd.params)
             // Collect system level contracts to be merged
@@ -473,11 +454,7 @@ class SymbolicSimulator (module : Module) {
                 
               }
             }
-            UclidMain.println("Contracts to be proved: ")
-            sys_contract_ids.foreach{
-              (id) => Console.printf(id.toString + " ")
-            }
-            Console.printf("\n")
+            
             // Collect all instances name
             // If not specified, then collect all instances that have contracts defined
             if(component_ids.size == 0){
@@ -506,16 +483,17 @@ class SymbolicSimulator (module : Module) {
             }
             val mergedagContractDecl = ContractOperation.merging(contracts, Identifier(module.id.toString() + "_system_level_contract"))
             var newContext = context + mergedagContractDecl
-            UclidMain.println("  Merged Contract: "+ mergedagContractDecl.toString)
+            
             // Need to generate two groups of properties: Validity and Hierarchy
             // Validity: comes from the assume_guarantee statement and produces (A => G)
             // Hierarchy: comes from analyzing nested instances and check whether
             //            the instances can satisfy the high-level contract.
-            Console.println("*** Generating properties for checking contract hierarchy.")
             // 1. Compose contracts from the nested instances (1 level down).
             // 2. Generate properties that check the contrapositive relationship
             //    between the assumptions and guarantees of the composed contract
             //    and the high-level contract.
+
+            // Generating properties for checking contract hierarchy.
             val hierContracts = module.contracts.filter(
               (contract) => {
                 if(contract.params.isEmpty)
@@ -532,13 +510,6 @@ class SymbolicSimulator (module : Module) {
               val refineSpecDecl_G = SpecDecl(Identifier(module.id.toString() + "_ag_property_refineG"), Operator.imply(composedContracts.expr_g, mergedagContractDecl.expr_g), List.empty)
               newContext = newContext + refineSpecDecl_A + refineSpecDecl_G + composedContracts
             }
-            
-            UclidMain.println("New module:")
-            UclidMain.println(newContext.module.toString)
-            // UclidMain.println("New map:")
-            // UclidMain.println(newContext.map.toString)
-            // UclidMain.println("New specs:")
-            // UclidMain.println(newContext.specs.toString)
             
             // Pasted from induction: perform induction
             assertionTree.startVerificationScope()
@@ -572,11 +543,6 @@ class SymbolicSimulator (module : Module) {
 
             assertLog.debug("preStateProperties: {}", preStateProperties.toString())
 
-            // base case.
-            // resetState()
-            // initialize(false, true, false, newContext, labelBase, assumptionFilter, propertyFilter)
-            // symbolicSimulate(0, k-1, true, false, newContext, labelBase, assumptionFilter, propertyFilter) // if k - 1 = 0, symbolicSimulate is a NOP.
-            
             // inductive step
             resetState()
             // we are assuming that the assertions hold for k-1 steps (by passing false, true to initialize and symbolicSimulate)
