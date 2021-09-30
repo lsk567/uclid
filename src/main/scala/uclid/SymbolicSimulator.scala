@@ -332,6 +332,10 @@ class SymbolicSimulator (module : Module) {
             check(solver, config, cmd);
             needToPrintResults=true
           case "ag_induction" =>
+            Console.println(module.contracts.size.toString + " contracts found in the module:")
+            module.contracts.foreach{
+              (contract) => Console.println(contract.id + ": (A: " + contract.expr_a.toString +  ", G: " + contract.expr_g.toString + ")")
+            }
             var sys_contract_ids = extractProperties(Identifier("contracts"), cmd.params)
             var component_ids = extractProperties(Identifier("components"), cmd.params)
             // Collect system level contracts to be merged
@@ -382,6 +386,9 @@ class SymbolicSimulator (module : Module) {
               val agSpecDecl = SpecDecl(Identifier(contract.id.toString() + "_ag_property"), contract.expr_g, contract.params)
               acc + agSpecDecl
             }}
+
+            // UclidMain.println("New module:")
+            // UclidMain.println(newContext.module.toString)
             // Pasted from induction: perform induction
             assertionTree.startVerificationScope()
             val labelBase : String = cmd.resultVar match {

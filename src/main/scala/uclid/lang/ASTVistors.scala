@@ -350,11 +350,8 @@ class ASTAnalyzer[T] (_passName : String, _pass: ReadOnlyPass[T]) extends ASTAna
       case next : NextDecl => visitNext(next, result, context.withEnvironment(SequentialEnvironment))
       case spec : SpecDecl => visitSpec(spec, result, context)
       case axiom : AxiomDecl => visitAxiom(axiom, result, context)
-<<<<<<< HEAD
       case groupDecl : GroupDecl => visitGroup(groupDecl, result, context)
-=======
       case contract : ContractDecl => visitContract(contract, result, context)
->>>>>>> 3039581 (ContractDecl follow the SpecDecl)
     }
     result = pass.applyOnDecl(TraversalDirection.Up, decl, result, context)
     return result
@@ -1250,11 +1247,8 @@ class ASTRewriter (_passName : String, _pass: RewritePass, setFilename : Boolean
       case nextDecl : NextDecl => visitNext(nextDecl, context.withEnvironment(SequentialEnvironment))
       case specDecl : SpecDecl => visitSpec(specDecl, context)
       case axiomDecl : AxiomDecl => visitAxiom(axiomDecl, context)
-<<<<<<< HEAD
       case groupDecl : GroupDecl => visitGroup(groupDecl, context)
-=======
       case contractDecl : ContractDecl => visitContract(contractDecl, context)
->>>>>>> 3039581 (ContractDecl follow the SpecDecl)
     }).flatMap(pass.rewriteDecl(_, context))
     return ASTNode.introducePos(setPosition, setFilename, declP, decl.position)
   }

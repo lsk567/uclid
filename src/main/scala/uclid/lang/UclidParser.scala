@@ -818,6 +818,9 @@ object UclidParser extends UclidTokenParsers with PackratParsers {
         case id ~ gType ~ gElems => {
           lang.GroupDecl(id, lang.GroupType(gType), gElems)
         }
+      }
+    }
+    
     lazy val ContractDecl : PackratParser[lang.ContractDecl] =  positioned {
       (KwContract) ~> ("[" ~> rep(Expr) <~ "]").? ~ Id ~  (":" ~> (KwAGContract) ~> ("(" ~> Expr)) ~ ("," ~> Expr) <~ ")" <~ ";" ^^ {
         case decOption ~ id ~ expr_a ~ expr_g => decOption match {
