@@ -411,6 +411,10 @@ class SymbolicSimulator (module : Module) {
             // go back to original state.
             resetState()
           case "ag_hierarchy" =>
+            if(!config.hierContractAnalysis) throw new Utils.AssertionError(
+                "-c flag is required for ag_hierarchy")
+
+
             Console.println(module.contracts.size.toString + " contracts found in the module:")
             module.contracts.foreach{
               (contract) => Console.println(contract.id + ": (A: " + contract.expr_a.toString +  ", G: " + contract.expr_g.toString + ")")
@@ -489,7 +493,7 @@ class SymbolicSimulator (module : Module) {
               val refineSpecDecl_G = SpecDecl(Identifier(module.id.toString() + "_ag_property_refineG"), Operator.imply(composedContracts.expr_g, mergedagContractDecl.expr_g), List.empty)
               newContext = newContext + refineSpecDecl_A + refineSpecDecl_G + composedContracts
             }
-            
+
             UclidMain.println("New module:")
             UclidMain.println(newContext.module.toString)
             // UclidMain.println("New map:")

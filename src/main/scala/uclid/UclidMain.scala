@@ -78,7 +78,8 @@ object UclidMain {
       printStackTrace: Boolean = false,
       verbose : Int = 0,
       files : Seq[java.io.File] = Seq(),
-      testFixedpoint: Boolean = false
+      testFixedpoint: Boolean = false,
+      hierContractAnalysis: Boolean = false
   )
 
   def parseOptions(args: Array[String]) : Option[Config] = {
@@ -120,6 +121,10 @@ object UclidMain {
       opt[Unit]('t', "test-fixedpoint").action {
         (_, c) => c.copy(testFixedpoint = true)
       }.text("Test fixed point")
+
+      opt[Unit]('c', "hierarchy-contract-analysis").action {
+        (_, c) => c.copy(hierContractAnalysis = true)
+      }.text("analyze module contract hierarchically")
 
       help("help").text("prints this usage text")
 
@@ -326,6 +331,8 @@ object UclidMain {
     // merge contract viewpoints
     passManager.addPass(new ContractSaturator())
     passManager.addPass(new ContractViewpointMerger(mainModuleName))
+    //
+    if(config.hierContractAnalysis) passManager.addPass(new InitNextRemover(mainModuleName))
     // flattens modules into main
     passManager.addPass(new ModuleFlattener(mainModuleName))
     // gets rid of modules apart from main
