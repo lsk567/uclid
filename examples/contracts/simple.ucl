@@ -1,0 +1,55 @@
+module A {
+    
+    input a : integer;
+    input b : integer;
+    output c: integer;
+
+    // Define p
+    define p() : boolean = ...;
+
+    // Assumption of the module
+    define assumption() : boolean = true;
+
+    // Guarantee of the module
+    define guarantee() : boolean = p();
+
+    // Define the assume-guarantee contract for A.
+    contract C : assume_guarantee(assumption(), guarantee());
+
+    control {
+        print_module;
+        v = ag_induction; // Checks if assumption() ==> guarantee()
+        check;
+        print_results;
+        v.print_cex;
+    }
+}
+
+module B {
+    
+    input a : integer;
+    input b : integer;
+    output ret: integer;
+
+    instance _a : A(a : (a), b : (b), c: (ret));
+
+    // Define q
+    define q() : boolean = ...;
+
+    // Define the assume-guarantee contract for B.
+    define assumption() : boolean = true;
+    define guarantee() : boolean = q();
+    contract C : assume_guarantee(assumption(), guarantee());
+
+    next {
+        next(_a);
+    }
+    
+    control {
+        print_module;
+        v = ag_hierarchy; // Checks if 
+        check;
+        print_results;
+        v.print_cex;
+    }
+}
